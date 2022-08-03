@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31624.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PortScanTool", "PortScanTool\PortScanTool.vcxproj", "{A29E2EA7-0C1D-4D6B-97FC-249B01FCB417}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A29E2EA7-0C1D-4D6B-97FC-249B01FCB417}.Debug|x64.ActiveCfg = Debug|x64
+		{A29E2EA7-0C1D-4D6B-97FC-249B01FCB417}.Debug|x64.Build.0 = Debug|x64
+		{A29E2EA7-0C1D-4D6B-97FC-249B01FCB417}.Debug|x86.ActiveCfg = Debug|Win32
+		{A29E2EA7-0C1D-4D6B-97FC-249B01FCB417}.Debug|x86.Build.0 = Debug|Win32
+		{A29E2EA7-0C1D-4D6B-97FC-249B01FCB417}.Release|x64.ActiveCfg = Release|x64
+		{A29E2EA7-0C1D-4D6B-97FC-249B01FCB417}.Release|x64.Build.0 = Release|x64
+		{A29E2EA7-0C1D-4D6B-97FC-249B01FCB417}.Release|x86.ActiveCfg = Release|Win32
+		{A29E2EA7-0C1D-4D6B-97FC-249B01FCB417}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {748E3B29-AA45-47D4-9916-689B9B1F3570}
+	EndGlobalSection
+EndGlobal
