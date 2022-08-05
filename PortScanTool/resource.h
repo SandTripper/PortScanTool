@@ -19,7 +19,6 @@
 #define IDC_BTN_STOP_SCAN               1008
 #define IDC_BTN_EXIT                    1009
 #define IDC_PROGRESS_SCANNER            1011
-#define IDC_LIST_IMFORMATION            1012
 #define IDC_LIST_DATA                   1012
 #define IDC_STATIC_DEFAULT_PORT         1013
 

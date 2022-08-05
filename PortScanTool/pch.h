@@ -9,5 +9,10 @@
 
 // 添加要在此处预编译的标头
 #include "framework.h"
-
+#include <atlstr.h>
+#include <winsock.h>
+#include <vector>
+#include <thread>
+#include <exception>
+#include <afxsock.h>
 #endif //PCH_H

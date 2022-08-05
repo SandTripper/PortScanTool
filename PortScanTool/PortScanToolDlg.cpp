@@ -7,6 +7,7 @@
 #include "PortScanTool.h"
 #include "PortScanToolDlg.h"
 #include "afxdialogex.h"
+#include "Scanner.h"
 
 
 #ifdef _DEBUG
@@ -68,12 +69,17 @@ void CPortScanToolDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDIT_MUL_PORT_FROM, m_from_port);
 	DDX_Control(pDX, IDC_EDIT_MUL_PORT_TO, m_to_port);
 	DDX_Control(pDX, IDC_EDIT_NUMBER_OF_THREAD, m_thread_number);
+	DDX_Control(pDX, IDC_BTN_START_SCAN, m_btn_start);
+	DDX_Control(pDX, IDC_BTN_STOP_SCAN, m_btn_stop);
 }
 
 BEGIN_MESSAGE_MAP(CPortScanToolDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_BN_CLICKED(IDC_BTN_START_SCAN, &CPortScanToolDlg::OnBnClickedBtnStartScan)
+	ON_BN_CLICKED(IDC_BTN_EXIT, &CPortScanToolDlg::OnBnClickedBtnExit)
+	ON_BN_CLICKED(IDC_BTN_STOP_SCAN, &CPortScanToolDlg::OnBnClickedBtnStopScan)
 END_MESSAGE_MAP()
 
 
@@ -110,10 +116,31 @@ BOOL CPortScanToolDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 
-	//默认显示的IP
+	//默认显示内容
 
 	m_strIP.SetAddress(127, 0, 0, 1);
+	m_single_port.SetWindowTextW(TEXT("1"));
+	m_from_port.SetWindowTextW(TEXT("1"));
+	m_to_port.SetWindowTextW(TEXT("65535"));
+	m_thread_number.SetWindowTextW(TEXT("100"));
 	UpdateData(FALSE);
+
+	//初始化进度条
+	m_progress_scanner.SetRange(0, 100);
+	m_progress_scanner.SetPos(0);
+
+	//初始化按键状态
+	m_btn_start.EnableWindow(1);
+	m_btn_stop.EnableWindow(0);
+
+	//初始化列表
+	m_list_data.InsertColumn(0, _T("当前扫描IP地址"), LVCFMT_LEFT, 220, 0);
+	m_list_data.InsertColumn(1, _T("开放端口编号"), LVCFMT_LEFT, 220, 1); 
+	DWORD dwStyle = m_list_data.GetExtendedStyle();
+	dwStyle |= LVS_EX_GRIDLINES;
+	m_list_data.SetExtendedStyle(dwStyle);
+
+	
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -165,5 +192,178 @@ void CPortScanToolDlg::OnPaint()
 HCURSOR CPortScanToolDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
+}
+
+
+
+void CPortScanToolDlg::OnBnClickedBtnStartScan()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	stopit = 0;
+	m_list_data.DeleteAllItems();
+	m_btn_start.EnableWindow(0);
+	m_btn_stop.EnableWindow(1);
+	UpdateData(0);
+	CString strPortFrom, strPortTo;
+	CString IP = GetIPAdds(&m_strIP);
+	int portFrom, portTo;
+	CString strThreadNumber;
+	int threadNumber = 1;
+	std::thread* th;
+	if (((CButton*)GetDlgItem(IDC_RADIO_SINGLE_PORT))->GetCheck())
+	{
+		m_single_port.GetWindowTextW(strPortFrom); 
+		if (strPortFrom.IsEmpty())
+		{
+			MessageBoxW(TEXT("请输入端口!"));
+			goto End;
+		}
+		portFrom = portTo= _ttoi(strPortFrom);
+		threadNumber = 1;
+	}
+	else if(((CButton*)GetDlgItem(IDC_RADIO_MUL_PORT))->GetCheck())
+	{
+		m_from_port.GetWindowTextW(strPortFrom);
+		m_to_port.GetWindowTextW(strPortTo);
+		if (strPortFrom.IsEmpty() || strPortTo.IsEmpty())
+		{
+			MessageBoxW(TEXT("请输入端口!"));
+			goto End;
+		}
+		m_thread_number.GetWindowTextW(strThreadNumber);
+		if (strThreadNumber.IsEmpty())
+		{
+			MessageBoxW(TEXT("请输入线程数!"));
+			goto End;
+		}
+		portFrom = _ttoi(strPortFrom);
+		portTo = _ttoi(strPortTo);
+		threadNumber = _ttoi(strThreadNumber);
+	}
+	else
+	{
+		MessageBoxW(TEXT("未勾选端口!"));
+		goto End;
+	}
+
+	int totalPort = portTo - portFrom + 1;
+	m_progress_scanner.SetRange(0, totalPort);
+	m_progress_scanner.SetPos(0);
+	
+
+	//scant(portFrom, portTo, IP, threadNumber, &stopit, &m_default_port, &m_list_data, &m_progress_scanner);
+	th = new std::thread(scant, portFrom, portTo, IP, threadNumber, &stopit, &m_default_port, &m_list_data, &m_progress_scanner,&m_btn_start,&m_btn_stop);
+	//th->join();
+
+	return;
+	
+
+End:;
+	m_progress_scanner.SetPos(0);
+	m_default_port.SetWindowTextW(L"当前扫描:");
+
+	m_btn_start.EnableWindow(1);
+	m_btn_stop.EnableWindow(0);
+}
+
+void scant(int portFrom, int portTo, CString IP,int threadNumber,int * stopit, CStatic *m_default_port, CListCtrl* m_list_data,CProgressCtrl* m_progress_scanner,CButton* m_btn_start,CButton* m_btn_stop)
+{
+	int totalPort = portTo - portFrom + 1;
+
+
+	Scanner* scanner = new Scanner();
+
+
+	int total_open_port = 0;
+
+
+	{
+		std::vector<int>isOpen(portTo + 1);
+		for (int i = portFrom; i <= portTo; i += threadNumber)
+		{
+			if (*stopit)
+				goto End;
+			int from = i, to = min(portTo, i + threadNumber);
+			std::vector<std::thread*>threadList;
+			for (int j = from; j <= to; j++)
+			{
+				CString str;
+				str.Format(L"当前扫描:%d", j);
+				m_default_port->SetWindowTextW(str);
+				std::thread* p = new std::thread(scanner->PortOpen, IP, j, &isOpen[j],stopit);
+				threadList.push_back(p);
+			}
+			for (const auto& th : threadList)
+			{
+				if (*stopit)
+					goto End;
+				th->join();
+			}
+			CString strNum;
+			for (int j = from; j <= to; j++)
+			{
+				if (isOpen[j])
+				{
+					strNum.Format(L"%d", j);
+					m_list_data->InsertItem(total_open_port, IP);
+					m_list_data->SetItemText(total_open_port, 1, strNum);
+					total_open_port++;
+				}
+			}
+			m_progress_scanner->SetPos(to - portFrom);
+		}
+	}
+
+End:;
+	Sleep(500);
+	m_progress_scanner->SetPos(0);
+	m_default_port->SetWindowTextW(L"当前扫描:");
+
+	m_btn_start->EnableWindow(1);
+	m_btn_stop->EnableWindow(0);
+	delete scanner;
+}
+
+CString GetIPAdds(CIPAddressCtrl* pIPAddrCtrl)
+{
+
+
+	BYTE byField0;
+
+	BYTE byField1;
+	BYTE byField2;
+	BYTE byField3;
+
+	pIPAddrCtrl->GetAddress(byField0, byField1, byField2, byField3);
+	CString IPStr;
+
+	IPStr.Format(_T("%d.%d.%d.%d"), byField0, byField1, byField2, byField3);
+
+	return IPStr;
+
+}
+
+
+
+
+
+
+void CPortScanToolDlg::OnBnClickedBtnExit()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	OnCancel();
+}
+
+
+void CPortScanToolDlg::OnBnClickedBtnStopScan()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	stopit = 1;
+	m_btn_start.EnableWindow(1);
+	m_btn_stop.EnableWindow(0);
+}
+
+void CPortScanToolDlg::OnOK()
+{
 }
 
